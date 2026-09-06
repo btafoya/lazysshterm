@@ -141,6 +141,13 @@ brew install lazysshterm
 lazysshterm
 ```
 
+### Option 2b: Nix (flake)
+
+```bash
+nix run github:btafoya/lazysshterm
+# or install into your profile / NixOS config as a flake input
+```
+
 ### Option 3: Download Binary from Releases
 
 Download from [GitHub Releases](https://github.com/btafoya/lazysshterm/releases) — prebuilt archives for Linux, macOS, and Windows (amd64/arm64/386, plus armv6 on Linux). You can use the snippet below to automatically fetch the latest version for your OS/ARCH:
