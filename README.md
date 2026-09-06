@@ -122,7 +122,18 @@ SSH into the selected server
 
 ## 📦 Installation
 
-### Option 1: Download Binary from Releases
+### Option 1: go install (Recommended)
+
+Requires [Go](https://go.dev/dl/) 1.24+. Installs straight from source, no separate download step:
+
+```bash
+go install github.com/btafoya/lazysshterm/cmd/lazysshterm@latest
+lazysshterm
+```
+
+Make sure `$(go env GOPATH)/bin` (or `$GOBIN`) is on your `PATH`. This builds a native SSH client binary — no system `ssh`/`ssh.exe` needed at runtime, Linux and Windows alike. Note: `go install` doesn't stamp a version/commit, so `--version`-style output will show as a dev build; use one of the options below if you need a versioned release binary.
+
+### Option 2: Download Binary from Releases
 
 Download from [GitHub Releases](https://github.com/btafoya/lazysshterm/releases). You can use the snippet below to automatically fetch the latest version for your OS/ARCH (Linux and Windows, amd64/arm64 supported):
 
@@ -139,7 +150,7 @@ sudo mv lazysshterm /usr/local/bin/
 lazysshterm
 ```
 
-### Option 2: Build from Source
+### Option 3: Build from Source
 
 ```bash
 # Clone the repository
@@ -154,7 +165,7 @@ make build
 make run
 
 # Cross-compile for Windows
-GOOS=windows GOARCH=amd64 go build -o lazysshterm.exe ./cmd
+GOOS=windows GOARCH=amd64 go build -o lazysshterm.exe ./cmd/lazysshterm
 ```
 
 ---

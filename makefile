@@ -25,7 +25,7 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 # Build variables
 BINARY_NAME ?= lazysshterm
 OUTPUT_DIR ?= ./bin
-CMD_DIR ?= ./cmd
+CMD_DIR ?= ./cmd/lazysshterm
 PKG_LIST := $(shell go list ./...)
 
 # LDFLAGS for version information
