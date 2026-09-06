@@ -14,6 +14,8 @@
 
 package main
 
+//go:generate goversioninfo -platform-specific versioninfo.json
+
 import (
 	"fmt"
 	"os"

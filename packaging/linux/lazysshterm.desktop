@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=LazySSHTerm
+Comment=Lazy SSH server picker TUI
+Exec=lazysshterm
+Icon=lazysshterm
+Terminal=true
+Categories=Utility;Network;TerminalEmulator;

@@ -168,6 +168,8 @@ make run
 GOOS=windows GOARCH=amd64 go build -o lazysshterm.exe ./cmd/lazysshterm
 ```
 
+Windows binaries carry an embedded application icon (built from `docs/logo.png` via `make icon`). Linux users who want the icon in an app launcher can copy `packaging/linux/lazysshterm.desktop` to `~/.local/share/applications/` and `packaging/linux/icons/lazysshterm.png` to `~/.local/share/icons/hicolor/256x256/apps/lazysshterm.png`.
+
 ---
 
 ## ⌨️ Key Bindings

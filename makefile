@@ -42,11 +42,13 @@ $(LOCALBIN):
 GOLANGCI_LINT_VERSION ?= v1.64.2
 GOFUMPT_VERSION ?= v0.7.0
 STATICCHECK_VERSION ?= 2024.1.1
+GOVERSIONINFO_VERSION ?= v1.7.0
 
 # Tool binaries
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 GOFUMPT = $(LOCALBIN)/gofumpt
 STATICCHECK = $(LOCALBIN)/staticcheck
+GOVERSIONINFO = $(LOCALBIN)/goversioninfo
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
@@ -65,7 +67,7 @@ ln -sf $(1)-$(3) $(1)
 endef
 
 .PHONY: tools
-tools: golangci-lint gofumpt staticcheck ## Install all development tools
+tools: golangci-lint gofumpt staticcheck goversioninfo ## Install all development tools
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary
@@ -81,6 +83,11 @@ $(GOFUMPT): $(LOCALBIN)
 staticcheck: $(STATICCHECK) ## Download staticcheck locally if necessary
 $(STATICCHECK): $(LOCALBIN)
 	$(call go-install-tool,$(STATICCHECK),honnef.co/go/tools/cmd/staticcheck,$(STATICCHECK_VERSION))
+
+.PHONY: goversioninfo
+goversioninfo: $(GOVERSIONINFO) ## Download goversioninfo locally if necessary
+$(GOVERSIONINFO): $(LOCALBIN)
+	$(call go-install-tool,$(GOVERSIONINFO),github.com/josephspurrier/goversioninfo/cmd/goversioninfo,$(GOVERSIONINFO_VERSION))
 
 ##@ Development
 
@@ -130,6 +137,14 @@ coverage: test ## Run tests and show coverage
 .PHONY: benchmark
 benchmark: ## Run benchmarks
 	go test -bench=. -benchmem ./...
+
+##@ Icon
+
+.PHONY: icon
+icon: goversioninfo ## Regenerate Windows icon.ico + resource syso files from docs/logo.png
+	convert docs/logo.png -define icon:auto-resize=256,128,64,48,32,16 cmd/lazysshterm/assets/icon.ico
+	cd cmd/lazysshterm && PATH="$(LOCALBIN):$$PATH" go generate ./...
+	convert docs/logo.png -resize 256x256 packaging/linux/icons/lazysshterm.png
 
 ##@ Building
 

@@ -38,8 +38,8 @@ bin
 dist/
 
 # Binary output
-lazyssh
-lazysshterm
+/lazyssh
+/lazysshterm
 
 # Local design notes
 DESIGN.md
