@@ -1,6 +1,6 @@
-module github.com/Adembc/lazyssh
+module github.com/btafoya/lazysshterm
 
-go 1.24.6
+go 1.26.0
 
 replace github.com/kevinburke/ssh_config => github.com/adembc/ssh_config v1.4.2
 
@@ -12,6 +12,8 @@ require (
 	github.com/rivo/tview v0.0.0-20250625164341-a4a78f1e05cb
 	github.com/spf13/cobra v1.9.1
 	go.uber.org/zap v1.27.0
+	golang.org/x/crypto v0.56.0
+	golang.org/x/term v0.45.0
 )
 
 require (
@@ -21,7 +23,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/term v0.34.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 )

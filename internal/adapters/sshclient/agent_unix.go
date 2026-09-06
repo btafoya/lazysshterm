@@ -12,15 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ports
+//go:build !windows
 
-import "github.com/btafoya/lazysshterm/internal/core/domain"
+package sshclient
 
-type ServerRepository interface {
-	ListServers(query string) ([]domain.Server, error)
-	UpdateServer(server domain.Server, newServer domain.Server) error
-	AddServer(server domain.Server) error
-	DeleteServer(server domain.Server) error
-	SetPinned(alias string, pinned bool) error
-	RecordSSH(alias string) error
+import (
+	"errors"
+	"net"
+	"os"
+)
+
+func dialAgent() (net.Conn, error) {
+	sock := os.Getenv("SSH_AUTH_SOCK")
+	if sock == "" {
+		return nil, errors.New("SSH_AUTH_SOCK not set")
+	}
+	return net.Dial("unix", sock)
 }

@@ -39,3 +39,12 @@ dist/
 
 # Binary output
 lazyssh
+lazysshterm
+
+# Local design notes
+DESIGN.md
+CLAUDE.md
+
+ANALYSIS.md
+.claude
+.codegraph

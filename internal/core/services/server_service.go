@@ -15,37 +15,37 @@
 package services
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
-	"github.com/Adembc/lazyssh/internal/core/domain"
-	"github.com/Adembc/lazyssh/internal/core/ports"
+	"github.com/btafoya/lazysshterm/internal/core/domain"
+	"github.com/btafoya/lazysshterm/internal/core/ports"
 	"go.uber.org/zap"
 )
 
 type serverService struct {
 	serverRepository ports.ServerRepository
+	connector        ports.SSHConnector
 	logger           *zap.SugaredLogger
 
 	fwMu     sync.Mutex
-	forwards map[string][]*os.Process
+	forwards map[string][]io.Closer
 }
 
 // NewServerService creates a new instance of serverService.
-func NewServerService(logger *zap.SugaredLogger, sr ports.ServerRepository) ports.ServerService {
+func NewServerService(logger *zap.SugaredLogger, sr ports.ServerRepository, conn ports.SSHConnector) ports.ServerService {
 	return &serverService{
 		logger:           logger,
 		serverRepository: sr,
+		connector:        conn,
 	}
 }
 
@@ -71,6 +71,20 @@ func (s *serverService) ListServers(query string) ([]domain.Server, error) {
 	})
 
 	return servers, nil
+}
+
+// findServer looks up a configured server by exact alias.
+func (s *serverService) findServer(alias string) (domain.Server, error) {
+	servers, err := s.serverRepository.ListServers("")
+	if err != nil {
+		return domain.Server{}, err
+	}
+	for _, srv := range servers {
+		if srv.Alias == alias {
+			return srv, nil
+		}
+	}
+	return domain.Server{}, fmt.Errorf("server with alias '%s' not found", alias)
 }
 
 // validateServer performs core validation of server fields.
@@ -153,149 +167,84 @@ func (s *serverService) SetPinned(alias string, pinned bool) error {
 	return err
 }
 
-// SSH starts an interactive SSH session to the given alias using the system's ssh client.
-func (s *serverService) SSH(alias string) error {
+// EncryptedIdentityFiles returns identity file paths that need a passphrase
+// before connecting, for the server and any resolvable ProxyJump hops.
+func (s *serverService) EncryptedIdentityFiles(alias string) ([]string, error) {
+	server, err := s.findServer(alias)
+	if err != nil {
+		return nil, err
+	}
+	return s.connector.EncryptedKeys(server), nil
+}
+
+// SSH starts a native interactive SSH session to the given alias.
+func (s *serverService) SSH(alias string, creds domain.Credentials) error {
+	return s.connect(alias, creds, nil)
+}
+
+// SSHWithForward starts a native interactive SSH session with a tunnel open
+// alongside it for the session's lifetime.
+func (s *serverService) SSHWithForward(alias string, creds domain.Credentials, spec domain.ForwardSpec) error {
+	return s.connect(alias, creds, &spec)
+}
+
+func (s *serverService) connect(alias string, creds domain.Credentials, forward *domain.ForwardSpec) error {
+	server, err := s.findServer(alias)
+	if err != nil {
+		return err
+	}
+
 	s.logger.Infow("ssh start", "alias", alias)
-	cmd := exec.Command("ssh", alias)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		s.logger.Errorw("ssh command failed", "alias", alias, "error", err)
+	sio := ports.SessionIO{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}
+	if err := s.connector.Connect(server, creds, sio, forward); err != nil {
+		s.logger.Errorw("ssh failed", "alias", alias, "error", err)
 		return err
 	}
 
 	if err := s.serverRepository.RecordSSH(alias); err != nil {
 		s.logger.Errorw("failed to record ssh metadata", "alias", alias, "error", err)
 	}
-
 	s.logger.Infow("ssh end", "alias", alias)
 	return nil
 }
 
-// SSHWithArgs runs system ssh with provided extra args (e.g., -L/-R/-D) for the given alias.
-func (s *serverService) SSHWithArgs(alias string, extraArgs []string) error {
-	s.logger.Infow("ssh start (with args)", "alias", alias, "args", extraArgs)
-	args := append([]string{}, extraArgs...)
-	args = append(args, alias)
-	// #nosec G204
-	cmd := exec.Command("ssh", args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		s.logger.Errorw("ssh (with args) failed", "alias", alias, "error", err)
-		return err
+// StartForward opens a background tunnel and tracks it for StopForwarding.
+// Returns a short id describing the tunnel for status display.
+func (s *serverService) StartForward(alias string, creds domain.Credentials, spec domain.ForwardSpec) (string, error) {
+	server, err := s.findServer(alias)
+	if err != nil {
+		return "", err
 	}
-	if err := s.serverRepository.RecordSSH(alias); err != nil {
-		s.logger.Errorw("failed to record ssh metadata", "alias", alias, "error", err)
-	}
-	s.logger.Infow("ssh end (with args)", "alias", alias)
-	return nil
-}
 
-// StartForward starts ssh port forwarding in the background and tracks the process.
-func (s *serverService) StartForward(alias string, extraArgs []string) (int, error) {
+	tunnel, err := s.connector.Forward(server, creds, spec)
+	if err != nil {
+		s.logger.Errorw("forward failed", "alias", alias, "error", err)
+		return "", err
+	}
+
 	s.fwMu.Lock()
 	if s.forwards == nil {
-		s.forwards = make(map[string][]*os.Process)
+		s.forwards = make(map[string][]io.Closer)
 	}
+	s.forwards[alias] = append(s.forwards[alias], tunnel)
 	s.fwMu.Unlock()
 
-	extraArgs = append(extraArgs, "-N", alias)
-
-	// #nosec G204
-	cmd := exec.Command("ssh", extraArgs...)
-
-	// Detach from TTY: discard stdio
-	devNull, err := os.OpenFile(os.DevNull, os.O_RDWR, 0)
-	if err != nil {
-		return 0, fmt.Errorf("failed to open devnull: %w", err)
-	}
-	defer func() {
-		if devNull != nil {
-			_ = devNull.Close()
-		}
-	}()
-
-	cmd.Stdin = devNull
-	cmd.Stdout = devNull
-	cmd.Stderr = devNull
-	// Set SysProcAttr in an OS-specific way (see sysprocattr_* files)
-	sysProcAttr := &syscall.SysProcAttr{}
-	setDetach(sysProcAttr)
-	cmd.SysProcAttr = sysProcAttr
-
-	if err := cmd.Start(); err != nil {
-		return 0, fmt.Errorf("failed to start ssh: %w", err)
-	}
-
-	proc := cmd.Process
-	if proc == nil {
-		return 0, fmt.Errorf("process is nil after start")
-	}
-	pid := proc.Pid
-
-	// Track process
-	s.fwMu.Lock()
-	s.forwards[alias] = append(s.forwards[alias], proc)
-	s.fwMu.Unlock()
-
-	// Cleanup on exit
-	go func(a string, c *exec.Cmd, dn *os.File) {
-		_ = c.Wait()
-		_ = dn.Close()
-
-		s.fwMu.Lock()
-		defer s.fwMu.Unlock()
-
-		procs := s.forwards[a]
-		if len(procs) == 0 {
-			return
-		}
-
-		filtered := make([]*os.Process, 0, len(procs))
-		for _, p := range procs {
-			if p != nil && p.Pid != pid {
-				filtered = append(filtered, p)
-			}
-		}
-
-		if len(filtered) == 0 {
-			delete(s.forwards, a)
-		} else {
-			s.forwards[a] = filtered
-		}
-	}(alias, cmd, devNull)
-
-	devNull = nil // Prevent defer from closing it
-
-	return pid, nil
+	return forwardID(spec), nil
 }
 
-// StopForwarding kills all active forward processes for the alias.
+// StopForwarding closes all active tunnels for the alias.
 func (s *serverService) StopForwarding(alias string) error {
 	s.fwMu.Lock()
-	procs := s.forwards[alias]
+	tunnels := s.forwards[alias]
 	delete(s.forwards, alias)
 	s.fwMu.Unlock()
 
-	if len(procs) == 0 {
-		return nil
-	}
-
 	var errs []error
-	for _, p := range procs {
-		if p != nil {
-			if err := p.Signal(syscall.SIGTERM); err != nil {
-				// If SIGTERM fails, try SIGKILL
-				if killErr := p.Kill(); killErr != nil {
-					errs = append(errs, fmt.Errorf("failed to kill pid %d: %w", p.Pid, killErr))
-				}
-			}
+	for _, t := range tunnels {
+		if err := t.Close(); err != nil {
+			errs = append(errs, err)
 		}
 	}
-
 	if len(errs) > 0 {
 		return fmt.Errorf("errors stopping forwards: %v", errs)
 	}
@@ -313,20 +262,15 @@ func (s *serverService) IsForwarding(alias string) bool {
 func (s *serverService) Ping(server domain.Server) (bool, time.Duration, error) {
 	start := time.Now()
 
-	host, port, ok := resolveSSHDestination(server.Alias)
-	if !ok {
-
-		host = strings.TrimSpace(server.Host)
-		if host == "" {
-			host = server.Alias
-		}
-		if server.Port > 0 {
-			port = server.Port
-		} else {
-			port = 22
-		}
+	host := strings.TrimSpace(server.Host)
+	if host == "" {
+		host = server.Alias
 	}
-	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+	port := server.Port
+	if port <= 0 {
+		port = 22
+	}
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
 
 	dialer := net.Dialer{Timeout: 3 * time.Second}
 	conn, err := dialer.Dial("tcp", addr)
@@ -337,43 +281,17 @@ func (s *serverService) Ping(server domain.Server) (bool, time.Duration, error) 
 	return true, time.Since(start), nil
 }
 
-// resolveSSHDestination uses `ssh -G <alias>` to extract HostName and Port from the user's SSH config.
-// Returns host, port, ok where ok=false if resolution failed.
-func resolveSSHDestination(alias string) (string, int, bool) {
-	alias = strings.TrimSpace(alias)
-	if alias == "" {
-		return "", 0, false
+func forwardID(spec domain.ForwardSpec) string {
+	kind := "L"
+	switch spec.Type {
+	case domain.ForwardRemote:
+		kind = "R"
+	case domain.ForwardDynamic:
+		kind = "D"
+	case domain.ForwardLocal:
 	}
-	cmd := exec.Command("ssh", "-G", alias)
-	out, err := cmd.Output()
-	if err != nil {
-		return "", 0, false
+	if spec.Type == domain.ForwardDynamic {
+		return fmt.Sprintf("%s %d", kind, spec.BindPort)
 	}
-	host := ""
-	port := 0
-	scanner := bufio.NewScanner(strings.NewReader(string(out)))
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "hostname ") {
-			parts := strings.Fields(line)
-			if len(parts) >= 2 {
-				host = parts[1]
-			}
-		}
-		if strings.HasPrefix(line, "port ") {
-			parts := strings.Fields(line)
-			if len(parts) >= 2 {
-				if p, err := strconv.Atoi(parts[1]); err == nil {
-					port = p
-				}
-			}
-		}
-	}
-	if host == "" {
-		host = alias
-	}
-	if port == 0 {
-		port = 22
-	}
-	return host, port, true
+	return fmt.Sprintf("%s %d->%s:%d", kind, spec.BindPort, spec.DestHost, spec.DestPort)
 }

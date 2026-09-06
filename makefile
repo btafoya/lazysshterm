@@ -1,4 +1,4 @@
-# Makefile for LazySSH project
+# Makefile for LazySSHTerm project
 
 ##@ General
 
@@ -23,7 +23,7 @@ VERSION ?= v0.1.0
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 # Build variables
-BINARY_NAME ?= lazyssh
+BINARY_NAME ?= lazysshterm
 OUTPUT_DIR ?= ./bin
 CMD_DIR ?= ./cmd
 PKG_LIST := $(shell go list ./...)

@@ -19,11 +19,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Adembc/lazyssh/internal/adapters/data/ssh_config_file"
-	"github.com/Adembc/lazyssh/internal/logger"
+	"github.com/btafoya/lazysshterm/internal/adapters/data/ssh_config_file"
+	"github.com/btafoya/lazysshterm/internal/adapters/sshclient"
+	"github.com/btafoya/lazysshterm/internal/logger"
 
-	"github.com/Adembc/lazyssh/internal/adapters/ui"
-	"github.com/Adembc/lazyssh/internal/core/services"
+	"github.com/btafoya/lazysshterm/internal/adapters/ui"
+	"github.com/btafoya/lazysshterm/internal/core/services"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,7 @@ var (
 )
 
 func main() {
-	log, err := logger.New("LAZYSSH")
+	log, err := logger.New("LAZYSSHTERM")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -49,10 +50,11 @@ func main() {
 		os.Exit(1)
 	}
 	sshConfigFile := filepath.Join(home, ".ssh", "config")
-	metaDataFile := filepath.Join(home, ".lazyssh", "metadata.json")
+	metaDataFile := filepath.Join(home, ".lazysshterm", "metadata.json")
 
 	serverRepo := ssh_config_file.NewRepository(log, sshConfigFile, metaDataFile)
-	serverService := services.NewServerService(log, serverRepo)
+	connector := sshclient.NewConnector(serverRepo)
+	serverService := services.NewServerService(log, serverRepo, connector)
 	tui := ui.NewTUI(log, serverService, version, gitCommit)
 
 	rootCmd := &cobra.Command{

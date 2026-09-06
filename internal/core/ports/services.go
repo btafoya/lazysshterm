@@ -17,7 +17,7 @@ package ports
 import (
 	"time"
 
-	"github.com/Adembc/lazyssh/internal/core/domain"
+	"github.com/btafoya/lazysshterm/internal/core/domain"
 )
 
 type ServerService interface {
@@ -26,9 +26,13 @@ type ServerService interface {
 	AddServer(server domain.Server) error
 	DeleteServer(server domain.Server) error
 	SetPinned(alias string, pinned bool) error
-	SSH(alias string) error
-	SSHWithArgs(alias string, extraArgs []string) error
-	StartForward(alias string, extraArgs []string) (int, error)
+
+	// EncryptedIdentityFiles returns identity file paths (target + any
+	// resolved ProxyJump hops) that need a passphrase before connecting.
+	EncryptedIdentityFiles(alias string) ([]string, error)
+	SSH(alias string, creds domain.Credentials) error
+	SSHWithForward(alias string, creds domain.Credentials, spec domain.ForwardSpec) error
+	StartForward(alias string, creds domain.Credentials, spec domain.ForwardSpec) (string, error)
 	StopForwarding(alias string) error
 	IsForwarding(alias string) bool
 	Ping(server domain.Server) (bool, time.Duration, error)

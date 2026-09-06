@@ -7,13 +7,13 @@ body:
       value: |
         # Feature Request
         
-        Thanks for helping make the LazySSH project better!
+        Thanks for helping make the LazySSHTerm project better!
 
   - type: checkboxes
     attributes:
       label: Checks
       options:
-        - label: I have searched the [existing issues](https://github.com/adembc/lazyssh/issues).
+        - label: I have searched the [existing issues](https://github.com/btafoya/lazysshterm/issues).
           required: true
 
   - type: textarea

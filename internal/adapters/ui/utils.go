@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Adembc/lazyssh/internal/core/domain"
+	"github.com/btafoya/lazysshterm/internal/core/domain"
 	"github.com/mattn/go-runewidth"
 )
 

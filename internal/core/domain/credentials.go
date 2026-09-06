@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ports
+package domain
 
-import "github.com/btafoya/lazysshterm/internal/core/domain"
-
-type ServerRepository interface {
-	ListServers(query string) ([]domain.Server, error)
-	UpdateServer(server domain.Server, newServer domain.Server) error
-	AddServer(server domain.Server) error
-	DeleteServer(server domain.Server) error
-	SetPinned(alias string, pinned bool) error
-	RecordSSH(alias string) error
+// Credentials holds interactively-collected secrets for one native SSH
+// connection attempt: passphrases for encrypted identity files (keyed by
+// file path, across the target and any resolved ProxyJump hops) and an
+// optional password.
+type Credentials struct {
+	Password       string
+	KeyPassphrases map[string]string
 }

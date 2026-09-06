@@ -15,12 +15,15 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/Adembc/lazyssh/internal/core/domain"
 	"github.com/atotto/clipboard"
+	"github.com/btafoya/lazysshterm/internal/core/domain"
+	"github.com/btafoya/lazysshterm/internal/core/ports"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -221,13 +224,49 @@ func (t *tui) handleReturnToSearch() {
 }
 
 func (t *tui) handleServerConnect() {
-	if server, ok := t.serverList.GetSelectedServer(); ok {
-
-		t.app.Suspend(func() {
-			_ = t.serverService.SSH(server.Alias)
-		})
-		t.refreshServerList()
+	server, ok := t.serverList.GetSelectedServer()
+	if !ok {
+		return
 	}
+	alias := server.Alias
+	paths, _ := t.serverService.EncryptedIdentityFiles(alias)
+	t.collectPassphrases(paths, domain.Credentials{}, func(creds domain.Credentials, ok bool) {
+		if !ok {
+			return
+		}
+		t.sshConnect(alias, creds, nil, false)
+	})
+}
+
+// sshConnect suspends the TUI, runs the native SSH session (optionally with
+// a forward alongside it), and offers exactly one password retry if no
+// key/agent auth worked.
+func (t *tui) sshConnect(alias string, creds domain.Credentials, forward *domain.ForwardSpec, retried bool) {
+	var err error
+	t.app.Suspend(func() {
+		if forward != nil {
+			err = t.serverService.SSHWithForward(alias, creds, *forward)
+		} else {
+			err = t.serverService.SSH(alias, creds)
+		}
+	})
+
+	if !retried && errors.Is(err, ports.ErrPasswordRequired) {
+		t.showSecretPrompt("Password", alias+" password", func(pw string, ok bool) {
+			if !ok {
+				t.refreshServerList()
+				return
+			}
+			creds.Password = pw
+			t.sshConnect(alias, creds, forward, true)
+		})
+		return
+	}
+
+	if err != nil {
+		t.showStatusTempColor("SSH failed: "+err.Error(), "#FF6B6B")
+	}
+	t.refreshServerList()
 }
 
 func (t *tui) handleServerSelectionChange(server domain.Server) {
@@ -500,13 +539,11 @@ func (t *tui) showPortForwardForm(server domain.Server) {
 		}
 
 		ft := typeChoices[currentTypeIdx]
-		var args []string
+		bindPort, _ := strconv.Atoi(portVal)
+		spec := domain.ForwardSpec{BindAddr: bindAddrVal, BindPort: bindPort}
+
 		if ft == ForwardTypeDynamic {
-			spec := portVal
-			if bindAddrVal != "" {
-				spec = bindAddrVal + ":" + portVal
-			}
-			args = append(args, "-D", spec)
+			spec.Type = domain.ForwardDynamic
 		} else {
 			if err := validateHost(hostVal); err != nil {
 				t.showStatusTempColor("Invalid host: "+err.Error(), "#FF6B6B")
@@ -516,40 +553,44 @@ func (t *tui) showPortForwardForm(server domain.Server) {
 				t.showStatusTempColor("Invalid host port: "+err.Error(), "#FF6B6B")
 				return
 			}
-			spec := portVal + ":" + hostVal + ":" + hostPortVal
-			if bindAddrVal != "" {
-				spec = bindAddrVal + ":" + spec
-			}
+			destPort, _ := strconv.Atoi(hostPortVal)
+			spec.DestHost = hostVal
+			spec.DestPort = destPort
 			if ft == ForwardTypeLocal {
-				args = append(args, "-L", spec)
+				spec.Type = domain.ForwardLocal
 			} else {
-				args = append(args, "-R", spec)
+				spec.Type = domain.ForwardRemote
 			}
 		}
 
 		onlyForward := modeChoices[currentModeIdx] == ForwardModeOnlyForward
 		alias := server.Alias
-		if onlyForward {
-			t.returnToMain()
-			t.showStatusTemp("Starting port forward…")
-			go func() {
-				pid, err := t.serverService.StartForward(alias, args)
-				t.app.QueueUpdateDraw(func() {
-					if err != nil {
-						t.showStatusTempColor("Forward failed: "+err.Error(), "#FF6B6B")
-					} else {
-						t.refreshServerList()
-						t.showStatusTemp(fmt.Sprintf("Port forwarding started (pid %d)", pid))
-					}
-				})
-			}()
-			return
-		}
-
-		t.app.Suspend(func() {
-			_ = t.serverService.SSHWithArgs(alias, args)
-		})
 		t.returnToMain()
+
+		paths, _ := t.serverService.EncryptedIdentityFiles(alias)
+		t.collectPassphrases(paths, domain.Credentials{}, func(creds domain.Credentials, ok bool) {
+			if !ok {
+				return
+			}
+
+			if onlyForward {
+				t.showStatusTemp("Starting port forward…")
+				go func() {
+					id, err := t.serverService.StartForward(alias, creds, spec)
+					t.app.QueueUpdateDraw(func() {
+						if err != nil {
+							t.showStatusTempColor("Forward failed: "+err.Error(), "#FF6B6B")
+						} else {
+							t.refreshServerList()
+							t.showStatusTemp("Port forwarding started: " + id)
+						}
+					})
+				}()
+				return
+			}
+
+			t.sshConnect(alias, creds, &spec, false)
+		})
 	})
 	form.AddButton("Cancel", func() { t.returnToMain() })
 	form.SetCancelFunc(func() { t.returnToMain() })

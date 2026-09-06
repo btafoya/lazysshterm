@@ -1,5 +1,5 @@
 version: 2
-project_name: lazyssh
+project_name: lazysshterm
 
 before:
   hooks:
@@ -50,9 +50,9 @@ changelog:
       - "^test:"
 brews:
   - repository:
-      owner: adembc
+      owner: btafoya
       name: homebrew-tap
-    homepage: "https://github.com/adembc/lazyssh"
+    homepage: "https://github.com/btafoya/lazysshterm"
     description: "A simple terminal UI for managing SSH connections.  "
 
 release:

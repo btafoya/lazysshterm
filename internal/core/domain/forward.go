@@ -12,15 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ports
+package domain
 
-import "github.com/btafoya/lazysshterm/internal/core/domain"
+// ForwardType is the SSH port forwarding direction.
+type ForwardType int
 
-type ServerRepository interface {
-	ListServers(query string) ([]domain.Server, error)
-	UpdateServer(server domain.Server, newServer domain.Server) error
-	AddServer(server domain.Server) error
-	DeleteServer(server domain.Server) error
-	SetPinned(alias string, pinned bool) error
-	RecordSSH(alias string) error
+const (
+	ForwardLocal ForwardType = iota
+	ForwardRemote
+	ForwardDynamic
+)
+
+// ForwardSpec describes one port forward: -L/-R with DestHost/DestPort set,
+// or -D (SOCKS5) with them empty.
+type ForwardSpec struct {
+	Type     ForwardType
+	BindAddr string
+	BindPort int
+	DestHost string
+	DestPort int
 }

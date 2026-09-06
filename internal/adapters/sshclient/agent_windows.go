@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ports
+//go:build windows
 
-import "github.com/btafoya/lazysshterm/internal/core/domain"
+package sshclient
 
-type ServerRepository interface {
-	ListServers(query string) ([]domain.Server, error)
-	UpdateServer(server domain.Server, newServer domain.Server) error
-	AddServer(server domain.Server) error
-	DeleteServer(server domain.Server) error
-	SetPinned(alias string, pinned bool) error
-	RecordSSH(alias string) error
+import (
+	"errors"
+	"net"
+)
+
+// ponytail: no Pageant/named-pipe agent support yet — identity file and
+// password auth still work on Windows. Add a named-pipe dial (needs
+// golang.org/x/sys/windows) if agent auth on Windows is actually needed.
+func dialAgent() (net.Conn, error) {
+	return nil, errors.New("ssh agent not supported on windows yet")
 }

@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Adembc/lazyssh/internal/core/domain"
+	"github.com/btafoya/lazysshterm/internal/core/domain"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -2039,7 +2039,7 @@ func (sf *ServerForm) serversDiffer(a, b domain.Server) bool {
 	valB := reflect.ValueOf(b)
 	typeA := valA.Type()
 
-	// Fields to skip during comparison (lazyssh metadata fields)
+	// Fields to skip during comparison (lazysshterm metadata fields)
 	skipFields := map[string]bool{
 		"Aliases":  true, // Computed field
 		"LastSeen": true, // Metadata field

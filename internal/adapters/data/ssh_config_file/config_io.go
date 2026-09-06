@@ -66,7 +66,7 @@ func (r *Repository) saveConfig(cfg *ssh_config.Config) error {
 		return fmt.Errorf("failed to write config to temporary file: %w", err)
 	}
 
-	// Ensure a one-time original backup exists before any modifications managed by lazyssh.
+	// Ensure a one-time original backup exists before any modifications managed by lazysshterm.
 	if err := r.createOriginalBackupIfNeeded(); err != nil {
 		return fmt.Errorf("failed to create original backup: %w", err)
 	}

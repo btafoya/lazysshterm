@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Adembc/lazyssh/internal/core/domain"
+	"github.com/btafoya/lazysshterm/internal/core/domain"
 )
 
 func TestBuildSSHCommand_PortForwarding(t *testing.T) {

@@ -1,12 +1,14 @@
 <div align="center">
-  <img src="./docs/logo.png" alt="lazyssh logo" width="600" height="600"/>
+  <img src="./docs/logo.png" alt="lazysshterm logo" width="600" height="600"/>
 </div>
 
 ---
 
-Lazyssh is a terminal-based, interactive SSH manager inspired by tools like lazydocker and k9s — but built for managing your fleet of servers directly from your terminal.
+lazysshterm is a terminal-based, interactive SSH manager inspired by tools like lazydocker and k9s — but built for managing your fleet of servers directly from your terminal.
 <br/>
-With lazyssh, you can quickly navigate, connect, manage, and transfer files between your local machine and any server defined in your `~/.ssh/config`. No more remembering IP addresses or running long scp commands — just a clean, keyboard-driven UI.
+With lazysshterm, you can quickly navigate, connect, manage, and transfer files between your local machine and any server defined in your `~/.ssh/config`. No more remembering IP addresses or running long scp commands — just a clean, keyboard-driven UI.
+
+A standalone fork of [lazyssh](https://github.com/adembc/lazyssh): connections, shell sessions, and port forwarding run on a native Go SSH client — no system `ssh`/`ssh.exe` binary required, Linux and Windows alike.
 
 ---
 
@@ -27,17 +29,15 @@ With lazyssh, you can quickly navigate, connect, manage, and transfer files betw
 - ↕️ Sort by alias or last SSH (toggle + reverse).
 
 ### Advanced SSH Configuration
-- 🔗 Port forwarding (LocalForward, RemoteForward, DynamicForward).
-- 🚀 Connection multiplexing for faster subsequent connections.
-- 🔐 Advanced authentication options (public key, password, agent forwarding).
-- 🔒 Security settings (ciphers, MACs, key exchange algorithms).
-- 🌐 Proxy settings (ProxyJump, ProxyCommand).
-- ⚙️ Extensive SSH config options organized in tabbed interface.
+- 🔗 Port forwarding (LocalForward, RemoteForward, DynamicForward/SOCKS5).
+- 🚀 Multi-hop ProxyJump, resolved through your `~/.ssh/config` aliases.
+- 🔐 Public key, ssh-agent, and password authentication.
+- 🔒 Trust-on-first-use host key verification against `~/.ssh/known_hosts`.
+- ⚙️ Extensive SSH config options organized in a tabbed interface.
 
 ### Key Management
 - 🔑 SSH key autocomplete with automatic detection of available keys.
-- 📝 Smart key selection with support for multiple keys.
-
+- 📝 Smart key selection with support for multiple keys, including encrypted (passphrase-protected) keys.
 
 ### Upcoming
 - 📁 Copy files between local and servers with an easy picker UI.
@@ -50,27 +50,29 @@ With lazyssh, you can quickly navigate, connect, manage, and transfer files betw
 
 ## 🔐 Security Notice
 
-lazyssh does not introduce any new security risks.
+lazysshterm does not introduce any new security risks.
 It is simply a UI/TUI wrapper around your existing `~/.ssh/config` file.
 
-- All SSH connections are executed through your system’s native ssh binary (OpenSSH).
+- All SSH connections run through a native Go SSH client (`golang.org/x/crypto/ssh`) built into lazysshterm — no dependency on a system `ssh`/`ssh.exe` binary, so it works the same on Linux and Windows.
 
-- Private keys, passwords, and credentials are never stored, transmitted, or modified by lazyssh.
+- Host keys are verified against your `~/.ssh/known_hosts` (trust-on-first-use for new hosts, hard rejection on a mismatch) — the same protection real `ssh` gives you.
+
+- Private keys, passwords, and credentials are never stored, transmitted, or modified by lazysshterm. Passphrases and passwords are only held in memory for the duration of a connection attempt.
 
 - Your existing IdentityFile paths and ssh-agent integrations work exactly as before.
 
-- lazyssh only reads and updates your `~/.ssh/config`. A backup of the file is created automatically before any changes.
+- lazysshterm only reads and updates your `~/.ssh/config`. A backup of the file is created automatically before any changes.
 
 - File permissions on your SSH config are preserved to ensure security.
 
 
 ## 🛡️ Config Safety: Non‑destructive writes and backups
 
-- Non‑destructive edits: lazyssh only writes the minimal required changes to your ~/.ssh/config. It uses a parser that preserves existing comments, spacing, order, and any settings it didn’t touch. Your handcrafted comments and formatting remain intact.
+- Non‑destructive edits: lazysshterm only writes the minimal required changes to your ~/.ssh/config. It uses a parser that preserves existing comments, spacing, order, and any settings it didn't touch. Your handcrafted comments and formatting remain intact.
 - Atomic writes: updates are written to a temporary file and then atomically renamed over the original, minimizing the risk of partial writes.
 - Backups:
-  - One‑time original backup: before lazyssh makes its first change, it creates a single snapshot named config.original.backup beside your SSH config. If this file is present, it will never be recreated or overwritten.
-  - Rolling backups: on every subsequent save, lazyssh also creates a timestamped backup named like: ~/.ssh/config-<timestamp>-lazyssh.backup. The app keeps at most 10 of these backups, automatically removing the oldest ones.
+  - One‑time original backup: before lazysshterm makes its first change, it creates a single snapshot named config.original.backup beside your SSH config. If this file is present, it will never be recreated or overwritten.
+  - Rolling backups: on every subsequent save, lazysshterm also creates a timestamped backup named like: ~/.ssh/config-<timestamp>-lazysshterm.backup. The app keeps at most 10 of these backups, automatically removing the oldest ones.
 
 ## 📷 Screenshots
 
@@ -120,42 +122,39 @@ SSH into the selected server
 
 ## 📦 Installation
 
-### Option 1: Homebrew (macOS)
+### Option 1: Download Binary from Releases
 
-```bash
-brew install Adembc/homebrew-tap/lazyssh
-```
-
-### Option 2: Download Binary from Releases
-
-Download from [GitHub Releases](https://github.com/Adembc/lazyssh/releases). You can use the snippet below to automatically fetch the latest version for your OS/ARCH (Darwin/Linux and amd64/arm64 supported):
+Download from [GitHub Releases](https://github.com/btafoya/lazysshterm/releases). You can use the snippet below to automatically fetch the latest version for your OS/ARCH (Linux and Windows, amd64/arm64 supported):
 
 ```bash
 # Detect latest version
-LATEST_TAG=$(curl -fsSL https://api.github.com/repos/Adembc/lazyssh/releases/latest | jq -r .tag_name)
+LATEST_TAG=$(curl -fsSL https://api.github.com/repos/btafoya/lazysshterm/releases/latest | jq -r .tag_name)
 # Download the correct binary for your system
-curl -LJO "https://github.com/Adembc/lazyssh/releases/download/${LATEST_TAG}/lazyssh_$(uname)_$(uname -m).tar.gz"
+curl -LJO "https://github.com/btafoya/lazysshterm/releases/download/${LATEST_TAG}/lazysshterm_$(uname)_$(uname -m).tar.gz"
 # Extract the binary
-tar -xzf lazyssh_$(uname)_$(uname -m).tar.gz
+tar -xzf lazysshterm_$(uname)_$(uname -m).tar.gz
 # Move to /usr/local/bin or another directory in your PATH
-sudo mv lazyssh /usr/local/bin/
+sudo mv lazysshterm /usr/local/bin/
 # enjoy!
-lazyssh
+lazysshterm
 ```
 
-### Option 3: Build from Source
+### Option 2: Build from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/Adembc/lazyssh.git
-cd lazyssh
+git clone https://github.com/btafoya/lazysshterm.git
+cd lazysshterm
 
-# Build for macOS
+# Build (native SSH client — no system ssh binary needed at runtime)
 make build
-./bin/lazyssh
+./bin/lazysshterm
 
 # Or Run it directly
 make run
+
+# Cross-compile for Windows
+GOOS=windows GOARCH=amd64 go build -o lazysshterm.exe ./cmd
 ```
 
 ---
@@ -174,9 +173,9 @@ make run
 | e     | Edit server                   |
 | t     | Edit tags                     |
 | d     | Delete server                 |
-| p     | Pin/Unpin server              |
+| p     | Pin/Unpin server               |
 | s     | Toggle sort field             |
-| S     | Reverse sort order            |
+| S     | Reverse sort order             |
 | q     | Quit                          |
 
 **In Server Form:**
@@ -195,10 +194,8 @@ Tip: The hint bar at the top of the list shows the most useful shortcuts.
 
 Contributions are welcome!
 
-- If you spot a bug or have a feature request, please [open an issue](https://github.com/adembc/lazyssh/issues).
+- If you spot a bug or have a feature request, please [open an issue](https://github.com/btafoya/lazysshterm/issues).
 - If you'd like to contribute, fork the repo and submit a pull request ❤️.
-
-We love seeing the community make Lazyssh better 🚀
 
 ### Semantic Pull Requests
 
@@ -222,28 +219,17 @@ Allowed types in this repo:
 Examples:
 - feat(ui): add server pinning and sorting options
 - fix(parser): handle comments at end of Host blocks
-- improve(cli): show friendly error when ssh binary missing
+- improve(cli): show friendly error when a host key can't be verified
 - refactor(config): simplify backup rotation logic
-- docs: add installation instructions for Homebrew
+- docs: add installation instructions
 - ci: cache Go toolchain and dependencies
 
 Tip: If your PR touches multiple areas, pick the most relevant scope or omit the scope.
 
 ---
 
-## ⭐ Support
-
-If you find Lazyssh useful, please consider giving the repo a **star** ⭐️ and join [stargazers](https://github.com/adembc/lazyssh/stargazers).
-
-☕ You can also support me by [buying me a coffee](https://www.buymeacoffee.com/adembc) ❤️
-<br/>
-<a href="https://buymeacoffee.com/adembc" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" width="200"></a>
-
-
----
-
 ## 🙏 Acknowledgments
 
-- Built with [tview](https://github.com/rivo/tview) and [tcell](https://github.com/gdamore/tcell).
+- A fork of [lazyssh](https://github.com/adembc/lazyssh) by [adembc](https://github.com/adembc) — the server management UI, config parsing, and overall design originate there.
+- Built with [tview](https://github.com/rivo/tview), [tcell](https://github.com/gdamore/tcell), and [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto/ssh) for the native SSH client.
 - Inspired by [k9s](https://github.com/derailed/k9s) and [lazydocker](https://github.com/jesseduffield/lazydocker).
-

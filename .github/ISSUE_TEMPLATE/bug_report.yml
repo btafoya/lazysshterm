@@ -7,20 +7,20 @@ body:
       value: |
         # Bug Report
         
-        Thanks for helping make the LazySSH project better!
+        Thanks for helping make the LazySSHTerm project better!
 
   - type: checkboxes
     attributes:
       label: Checks
       options:
-        - label: I have searched the [existing issues](https://github.com/adembc/lazyssh/issues).
+        - label: I have searched the [existing issues](https://github.com/btafoya/lazysshterm/issues).
           required: true
 
 
   - type: input
-    id: lazyssh-version
+    id: lazysshterm-version
     attributes:
-      label: LazySSH Version
+      label: LazySSHTerm Version
       placeholder: X.X.X
     validations:
       required: true
@@ -29,7 +29,7 @@ body:
     id: os
     attributes:
       label: Operating System
-      description: What is the OS/ARCH you are using to run LazySSH ?
+      description: What is the OS/ARCH you are using to run LazySSHTerm ?
       placeholder: macOS (darwin/amd64), macOS (darwin/arm64), Linux (linux/arm64), etc...
     validations:
       required: true

@@ -18,7 +18,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"go.uber.org/zap"
 
-	"github.com/Adembc/lazyssh/internal/core/ports"
+	"github.com/btafoya/lazysshterm/internal/core/ports"
 	"github.com/rivo/tview"
 )
 
