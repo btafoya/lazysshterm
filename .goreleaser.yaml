@@ -15,6 +15,10 @@ builds:
       - arm
       - arm64
       - 386
+    ignore:
+      # ponytail: go toolchain doesn't support windows/arm
+      - goos: windows
+        goarch: arm
     main: ./cmd/lazysshterm/main.go
     ldflags:
       -X main.version={{.Version}} -X main.gitCommit={{.Commit}}
