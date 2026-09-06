@@ -19,4 +19,4 @@ jobs:
           version:  2.9.0
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

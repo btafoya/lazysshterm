@@ -48,12 +48,16 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-brews:
-  - repository:
-      owner: btafoya
-      name: homebrew-tap
-    homepage: "https://github.com/btafoya/lazysshterm"
-    description: "A simple terminal UI for managing SSH connections.  "
+# brews: disabled — btafoya/homebrew-tap doesn't exist yet.
+# ponytail: re-add once the tap repo exists and a PAT with push
+# access to it is set as a repo secret (default GITHUB_TOKEN can't
+# push cross-repo).
+# brews:
+#   - repository:
+#       owner: btafoya
+#       name: homebrew-tap
+#     homepage: "https://github.com/btafoya/lazysshterm"
+#     description: "A simple terminal UI for managing SSH connections.  "
 
 release:
   footer: >-
