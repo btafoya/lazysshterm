@@ -133,9 +133,17 @@ lazysshterm
 
 Make sure `$(go env GOPATH)/bin` (or `$GOBIN`) is on your `PATH`. This builds a native SSH client binary — no system `ssh`/`ssh.exe` needed at runtime, Linux and Windows alike. Note: `go install` doesn't stamp a version/commit, so `--version`-style output will show as a dev build; use one of the options below if you need a versioned release binary.
 
-### Option 2: Download Binary from Releases
+### Option 2: Homebrew (macOS/Linux)
 
-Download from [GitHub Releases](https://github.com/btafoya/lazysshterm/releases). You can use the snippet below to automatically fetch the latest version for your OS/ARCH (Linux and Windows, amd64/arm64 supported):
+```bash
+brew tap btafoya/tap
+brew install lazysshterm
+lazysshterm
+```
+
+### Option 3: Download Binary from Releases
+
+Download from [GitHub Releases](https://github.com/btafoya/lazysshterm/releases) — prebuilt archives for Linux, macOS, and Windows (amd64/arm64/386, plus armv6 on Linux). You can use the snippet below to automatically fetch the latest version for your OS/ARCH:
 
 ```bash
 # Detect latest version
@@ -150,7 +158,7 @@ sudo mv lazysshterm /usr/local/bin/
 lazysshterm
 ```
 
-### Option 3: Build from Source
+### Option 4: Build from Source
 
 ```bash
 # Clone the repository
