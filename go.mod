@@ -1,6 +1,6 @@
 module github.com/btafoya/lazysshterm
 
-go 1.26.0
+go 1.26.6
 
 replace github.com/kevinburke/ssh_config => github.com/adembc/ssh_config v1.4.2
 
